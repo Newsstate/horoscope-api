@@ -39,16 +39,17 @@ export async function GET(request: Request) {
       );
     }
 
-    const rashiSlug = ZODIAC_URLS[sign];
-    const langPath = lang === "hi" ? "/hindi" : "";
-    const url = `https://www.drikpanchang.com/astrology/prediction/${rashiSlug}/${rashiSlug}-daily-rashiphal.html?prediction-day=${day}-&lang=hi&ck=1`;
+  const rashiSlug = ZODIAC_URLS[sign];
+const langParam = lang === "hi" ? "hi" : "en"; // <-- dynamic language
+const url = `https://www.drikpanchang.com/astrology/prediction/${rashiSlug}/${rashiSlug}-daily-rashiphal.html?prediction-day=${day}&lang=${langParam}&ck=1`;
 
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; HoroscopeBot/1.0; +https://example.com)"
-      },
-      cache: "no-store"
-    });
+const res = await fetch(url, {
+  headers: {
+    "User-Agent": "Mozilla/5.0 (compatible; HoroscopeBot/1.0; +https://example.com)"
+  },
+  cache: "no-store"
+});
+
 
     const html = await res.text();
     const $ = cheerio.load(html);
