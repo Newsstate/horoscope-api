@@ -22,8 +22,8 @@ export async function GET(request: Request) {
     const yyyy = today.getFullYear();
     const dateStr = dateParam || `${dd}/${mm}/${yyyy}`;
 
-    // Hindi page uses /hindi/ path
-    const langPath = lang === "hi" ? "/hindi" : "";
+    // Hindi path
+    const langPath = lang==="hi" ? "/hindi" : "";
     const url = `https://www.drikpanchang.com${langPath}/panchang/day-panchang.html?date=${dateStr}`;
 
     const res = await fetch(url, {
@@ -40,14 +40,34 @@ export async function GET(request: Request) {
 
     const panchangData: Record<string,string> = {};
 
-    // Scrape table rows
-    $(".panchang-table tr").each((_, el) => {
+    // 1️⃣ Scrape tables
+    $("table.panchang_table tr").each((_, el)=>{
       const key = $(el).find("th").text().trim();
       const val = $(el).find("td").text().trim();
       if(key && val){
         panchangData[key] = val;
       }
     });
+
+    // 2️⃣ Scrape divs (fallback)
+    $(".panchang-detail").each((_, el)=>{
+      const key = $(el).find(".panchang-label").text().trim();
+      const val = $(el).find(".panchang-value").text().trim();
+      if(key && val){
+        panchangData[key] = val;
+      }
+    });
+
+    // 3️⃣ If still empty, try generic rows
+    if(Object.keys(panchangData).length === 0){
+      $("tr").each((_, el)=>{
+        const key = $(el).find("th, td:first-child").text().trim();
+        const val = $(el).find("td:last-child").text().trim();
+        if(key && val){
+          panchangData[key] = val;
+        }
+      });
+    }
 
     return new NextResponse(
       JSON.stringify({
@@ -59,6 +79,7 @@ export async function GET(request: Request) {
     );
 
   } catch (error) {
+    console.error(error);
     return new NextResponse(
       JSON.stringify({ error: "Server error" }),
       { status: 500, headers: CORS_HEADERS }
