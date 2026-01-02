@@ -3,6 +3,12 @@ import * as cheerio from "cheerio";
 
 export const runtime = "nodejs";
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET",
+  "Access-Control-Allow-Headers": "Content-Type"
+};
+
 export async function GET() {
   try {
     const url =
@@ -11,14 +17,10 @@ export async function GET() {
     const res = await fetch(url, {
       headers: {
         "User-Agent":
-          "Mozilla/5.0 (compatible; HoroscopeBot/1.0; +https://example.com)",
+          "Mozilla/5.0 (compatible; HoroscopeBot/1.0; +https://example.com)"
       },
-      cache: "no-store",
+      cache: "no-store"
     });
-
-    if (!res.ok) {
-      throw new Error("Failed to fetch source");
-    }
 
     const html = await res.text();
     const $ = cheerio.load(html);
@@ -33,22 +35,28 @@ export async function GET() {
     });
 
     if (!horoscope) {
-      throw new Error("Horoscope not found");
+      return new NextResponse(
+        JSON.stringify({ error: "Horoscope not found" }),
+        { status: 404, headers: CORS_HEADERS }
+      );
     }
 
-    return NextResponse.json({
-      sign: "Mesha (Aries)",
-      date: new Date().toLocaleDateString("en-IN", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
+    return new NextResponse(
+      JSON.stringify({
+        sign: "Mesha (Aries)",
+        date: new Date().toLocaleDateString("en-IN", {
+          day: "numeric",
+          month: "long",
+          year: "numeric"
+        }),
+        horoscope
       }),
-      horoscope,
-    });
+      { headers: CORS_HEADERS }
+    );
   } catch (error) {
-    return NextResponse.json(
-      { error: "Unable to load horoscope" },
-      { status: 500 }
+    return new NextResponse(
+      JSON.stringify({ error: "Server error" }),
+      { status: 500, headers: CORS_HEADERS }
     );
   }
 }
