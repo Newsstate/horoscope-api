@@ -9,24 +9,57 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type"
 };
 
-export async function GET() {
+// Map zodiac slugs to Drik Panchang URLs
+const ZODIAC_URLS: Record<string, string> = {
+  aries: "mesha-rashi",
+  taurus: "vrishabha-rashi",
+  gemini: "mithuna-rashi",
+  cancer: "karka-rashi",
+  leo: "simha-rashi",
+  virgo: "kanya-rashi",
+  libra: "tula-rashi",
+  scorpio: "vrishchika-rashi",
+  sagittarius: "dhanu-rashi",
+  capricorn: "makara-rashi",
+  aquarius: "kumbha-rashi",
+  pisces: "meen-rashi"
+};
+
+export async function GET(request: Request) {
   try {
-    const url =
-      "https://www.drikpanchang.com/astrology/prediction/mesha-rashi/mesha-rashi-daily-rashiphal.html?prediction-day=today";
+    const urlParams = new URL(request.url).searchParams;
+    const sign = (urlParams.get("sign") || "aries").toLowerCase();
+    const day = (urlParams.get("day") || "today").toLowerCase();
+    const lang = (urlParams.get("lang") || "en").toLowerCase();
+
+    if (!ZODIAC_URLS[sign]) {
+      return new NextResponse(
+        JSON.stringify({ error: "Invalid zodiac sign" }),
+        { status: 400, headers: CORS_HEADERS }
+      );
+    }
+
+    // Build Drik Panchang URL
+    const baseUrl = "https://www.drikpanchang.com/astrology/prediction";
+    const rashiSlug = ZODIAC_URLS[sign];
+    const langPath = lang === "hi" ? "/hindi" : "";
+    const url = `${baseUrl}/${rashiSlug}/${rashiSlug}-daily-rashiphal${langPath}.html?prediction-day=${day}`;
 
     const res = await fetch(url, {
       headers: {
-        "User-Agent":
-          "Mozilla/5.0 (compatible; HoroscopeBot/1.0; +https://example.com)"
+        "User-Agent": "Mozilla/5.0 (compatible; HoroscopeBot/1.0; +https://example.com)"
       },
       cache: "no-store"
     });
+
+    if (!res.ok) {
+      throw new Error("Failed to fetch horoscope");
+    }
 
     const html = await res.text();
     const $ = cheerio.load(html);
 
     let horoscope = "";
-
     $("p").each((_, el) => {
       const text = $(el).text().trim();
       if (text.length > 120 && !horoscope) {
@@ -43,7 +76,9 @@ export async function GET() {
 
     return new NextResponse(
       JSON.stringify({
-        sign: "Mesha (Aries)",
+        sign: sign,
+        day: day,
+        lang: lang,
         date: new Date().toLocaleDateString("en-IN", {
           day: "numeric",
           month: "long",
