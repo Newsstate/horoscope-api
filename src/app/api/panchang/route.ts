@@ -19,9 +19,10 @@ export async function GET(request: Request) {
     const dd = String(today.getDate()).padStart(2, "0");
     const mm = String(today.getMonth() + 1).padStart(2, "0");
     const yyyy = today.getFullYear();
-    const dateStr = dateParam || `${dd}/${mm}/${yyyy}`;
 
+    const dateStr = dateParam || `${dd}/${mm}/${yyyy}`;
     const langPath = lang === "hi" ? "/hindi" : "";
+
     const url = `https://www.drikpanchang.com${langPath}/panchang/day-panchang.html?date=${dateStr}`;
 
     const res = await fetch(url, {
@@ -33,26 +34,27 @@ export async function GET(request: Request) {
     const dom = new JSDOM(html);
     const doc = dom.window.document;
 
-    const panchangData: Record<string, string> = {};
+    const panchang: Record<string, string> = {};
 
     doc.querySelectorAll("table.panchang_table tr").forEach((row) => {
       const th = row.querySelector("th")?.textContent?.trim();
       const td = row.querySelector("td")?.textContent?.trim();
-      if (th && td) panchangData[th] = td;
+      if (th && td) panchang[th] = td;
     });
 
     return NextResponse.json(
       {
+        success: true,
         date: dateStr,
         lang,
-        panchang: panchangData,
+        panchang,
       },
       { headers: CORS_HEADERS }
     );
   } catch (err) {
     console.error(err);
     return NextResponse.json(
-      { error: "Server error" },
+      { success: false, error: "Server error" },
       { status: 500, headers: CORS_HEADERS }
     );
   }
