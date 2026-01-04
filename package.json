@@ -1,6 +1,7 @@
 {
   "name": "horoscope-api",
   "version": "1.0.0",
+  "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -10,8 +11,8 @@
     "next": "14.2.5",
     "react": "18.2.0",
     "react-dom": "18.2.0",
-    "puppeteer": "^23.0.0"
-     "jsdom": "^24.0.0"
+    "cheerio": "^1.0.0-rc.12",
+    "jsdom": "^24.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.5.0",
