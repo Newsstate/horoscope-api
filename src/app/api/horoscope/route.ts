@@ -9,7 +9,6 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type"
 };
 
-// Zodiac slugs for Drik Panchang
 const ZODIAC_URLS: Record<string, string> = {
   aries: "mesha-rashi",
   taurus: "vrishabha-rashi",
@@ -27,34 +26,42 @@ const ZODIAC_URLS: Record<string, string> = {
 
 export async function GET(request: Request) {
   try {
-    const urlParams = new URL(request.url).searchParams;
-    const sign = (urlParams.get("sign") || "aries").toLowerCase();
-    const day = (urlParams.get("day") || "today").toLowerCase();
-    const lang = (urlParams.get("lang") || "en").toLowerCase();
+    const params = new URL(request.url).searchParams;
+
+    const sign = (params.get("sign") || "aries").toLowerCase();
+    const day = (params.get("day") || "today").toLowerCase();
+    const langRaw = (params.get("lang") || "en").toLowerCase();
 
     if (!ZODIAC_URLS[sign]) {
-      return new NextResponse(
-        JSON.stringify({ error: "Invalid zodiac sign" }),
+      return NextResponse.json(
+        { error: "Invalid zodiac sign" },
         { status: 400, headers: CORS_HEADERS }
       );
     }
 
-  const rashiSlug = ZODIAC_URLS[sign];
-const langParam = lang === "hi" ? "hi" : "en"; // <-- dynamic language
-const url = `https://www.drikpanchang.com/astrology/prediction/${rashiSlug}/${rashiSlug}-daily-rashiphal.html?prediction-day=${day}&lang=${langParam}&ck=1`;
+    /* ✅ FIX: normalize language */
+    const isHindi = ["hi", "hindi"].includes(langRaw);
+    const langParam = isHindi ? "hi" : "en";
 
-const res = await fetch(url, {
-  headers: {
-    "User-Agent": "Mozilla/5.0 (compatible; HoroscopeBot/1.0; +https://example.com)"
-  },
-  cache: "no-store"
-});
+    const rashiSlug = ZODIAC_URLS[sign];
+    const url =
+      `https://www.drikpanchang.com/astrology/prediction/${rashiSlug}/${rashiSlug}-daily-rashiphal.html` +
+      `?prediction-day=${day}&lang=${langParam}&ck=1`;
 
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) HoroscopeBot/1.0"
+      },
+      cache: "no-store"
+    });
 
     const html = await res.text();
     const $ = cheerio.load(html);
 
     let horoscope = "";
+
+    /* ✅ safer selector */
     $("p").each((_, el) => {
       const text = $(el).text().trim();
       if (text.length > 120 && !horoscope) {
@@ -63,29 +70,35 @@ const res = await fetch(url, {
     });
 
     if (!horoscope) {
-      return new NextResponse(
-        JSON.stringify({ error: "Horoscope not found" }),
+      return NextResponse.json(
+        { error: "Horoscope not found" },
         { status: 404, headers: CORS_HEADERS }
       );
     }
 
-    return new NextResponse(
-      JSON.stringify({
+    /* ✅ language-aware date */
+    const date = new Date().toLocaleDateString(
+      isHindi ? "hi-IN" : "en-IN",
+      {
+        day: "numeric",
+        month: "long",
+        year: "numeric"
+      }
+    );
+
+    return NextResponse.json(
+      {
         sign,
         day,
-        lang,
-        date: new Date().toLocaleDateString("en-IN", {
-          day: "numeric",
-          month: "long",
-          year: "numeric"
-        }),
+        lang: isHindi ? "hi" : "en",
+        date,
         horoscope
-      }),
+      },
       { headers: CORS_HEADERS }
     );
-  } catch (error) {
-    return new NextResponse(
-      JSON.stringify({ error: "Server error" }),
+  } catch (err) {
+    return NextResponse.json(
+      { error: "Server error" },
       { status: 500, headers: CORS_HEADERS }
     );
   }
